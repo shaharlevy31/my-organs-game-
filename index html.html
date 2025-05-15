@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק התאמת איברי הגוף</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            direction: rtl;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-screen, .game-screen, .result-screen {
+            display: none;
+        }
+        
+        .welcome-screen.active, .game-screen.active, .result-screen.active {
+            display: block;
+        }
+        
+        .name-input {
+            margin: 20px 0;
+        }
+        
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 200px;
+            text-align: center;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .timer {
+            font-size: 18px;
+            color: #e74c3c;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .score {
+            font-size: 20px;
+            color: #2c3e50;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .definition {
+            font-size: 22px;
+            color: #27ae60;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .option {
+            cursor: pointer;
+            border: 3px solid #bdc3c7;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+        
+        .option:hover {
+            transform: scale(1.05);
+        }
+        
+        .option img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+        }
+        
+        .selected {
+            border-color: #3498db;
+        }
+        
+        .correct {
+            border-color: #2ecc71;
+        }
+        
+        .incorrect {
+            border-color: #e74c3c;
+        }
+        
+        .victory-container {
+            text-align: center;
+        }
+        
+        .victory-container img {
+            width: 200px;
+            margin: 20px 0;
+        }
+        
+        .final-score {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 15px 0;
+        }
+        
+        .congratulation {
+            font-size: 32px;
+            color: #27ae60;
+            margin: 20px 0;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .instructions {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- מסך פתיחה -->
+    <div class="container">
+        <div class="welcome-screen active">
+            <h1>ברוכים הבאים למשחק איברי הגוף</h1>
+            <div class="name-input">
+                <label for="player-name">הכנס את שמך:</label><br>
+                <input type="text" id="player-name" placeholder="השם שלך">
+            </div>
+            <button id="start-game">התחל משחק</button>
+        </div>
+        
+        <!-- מסך המשחק -->
+        <div class="game-screen">
+            <h1>משחק איברי הגוף</h1>
+            <div class="score">ניקוד: <span id="score-value">0</span></div>
+            <div class="timer">זמן: <span id="timer-value">20</span> שניות</div>
+            <div class="instructions">התאם את ההגדרה הבאה לתמונה הנכונה</div>
+            <div class="definition" id="current-definition"></div>
+            <div class="options" id="options-container"></div>
+            <button id="next-stage" style="display: none;">עבור לשלב הבא</button>
+        </div>
+        
+        <!-- מסך תוצאות -->
+        <div class="result-screen">
+            <h1>סיימת את המשחק!</h1>
+            <div class="victory-container">
+                <img src="victory.png" alt="גביע ניצחון">
+                <div class="congratulation">כל הכבוד!</div>
+                <div class="final-score">צברת <span id="final-score">0</span> נקודות</div>
+                <div id="player-name-display"></div>
+                <button id="play-again">שחק שוב</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="correctSound" src="sound.mp3"></audio>
+
+    <script>
+        // נתוני המשחק
+        const gameData = [
+            // שלב 1
+            {
+                definition: "אני עוזר לך לראות",
+                options: [
+                    { image: "https://via.placeholder.com/300?text=עין", isCorrect: true },
+                    { image: "https://via.placeholder.com/300?text=אוזן", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=אף", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=לשון", isCorrect: false }
+                ]
+            },
+            // שלב 2
+            {
+                definition: "אני עוזר לך לשמוע קולות",
+                options: [
+                    { image: "https://via.placeholder.com/300?text=שיניים", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=אוזן", isCorrect: true },
+                    { image: "https://via.placeholder.com/300?text=רגל", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=יד", isCorrect: false }
+                ]
+            },
+            // שלב 3
+            {
+                definition: "אני פועם כל הזמן ושולח דם לכל הגוף",
+                options: [
+                    { image: "https://via.placeholder.com/300?text=מוח", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=ריאות", isCorrect: false },
+                    { image: "https://via.placeholder.com/300?text=לב", isCorrect: true },
+                    { image: "https://via.placeholder.com/300?text=קיבה", isCorrect: false }
+                ]
+            }
+        ];
+
+        // משתנים גלובליים
+        let currentStage = 0;
+        let score = 0;
+        let timer;
+        let timeLeft = 20;
+        let playerName = "";
+        let hasAnswered = false;
+
+        // אלמנטים מהדף
+        const welcomeScreen = document.querySelector('.welcome-screen');
+        const gameScreen = document.querySelector('.game-screen');
+        const resultScreen = document.querySelector('.result-screen');
+        const playerNameInput = document.getElementById('player-name');
+        const startGameButton = document.getElementById('start-game');
+        const nextStageButton = document.getElementById('next-stage');
+        const scoreValue = document.getElementById('score-value');
+        const timerValue = document.getElementById('timer-value');
+        const currentDefinition = document.getElementById('current-definition');
+        const optionsContainer = document.getElementById('options-container');
+        const finalScore = document.getElementById('final-score');
+        const playerNameDisplay = document.getElementById('player-name-display');
+        const playAgainButton = document.getElementById('play-again');
+        const correctSound = document.getElementById('correctSound');
+
+        // פונקציה להתחלת המשחק
+        startGameButton.addEventListener('click', () => {
+            playerName = playerNameInput.value.trim();
+            if (!playerName) {
+                alert("אנא הכנס את שמך");
+                return;
+            }
+            
+            welcomeScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+            
+            startStage(currentStage);
+        });
+
+        // פונקציה להתחלת שלב
+        function startStage(stageIndex) {
+            if (stageIndex >= gameData.length) {
+                endGame();
+                return;
+            }
+            
+            const stage = gameData[stageIndex];
+            hasAnswered = false;
+            
+            // הגדר את ההגדרה
+            currentDefinition.textContent = stage.definition;
+            
+            // אפס את הטיימר
+            timeLeft = 20;
+            timerValue.textContent = timeLeft;
+            clearInterval(timer);
+            timer = setInterval(updateTimer, 1000);
+            
+            // יצירת האפשרויות
+            optionsContainer.innerHTML = '';
+            
+            // ערבוב האפשרויות
+            const shuffledOptions = [...stage.options].sort(() => Math.random() - 0.5);
+            
+            shuffledOptions.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.innerHTML = `<img src="${option.image}" alt="אפשרות ${index + 1}">`;
+                
+                optionElement.addEventListener('click', () => {
+                    if (hasAnswered) return;
+                    
+                    hasAnswered = true;
+                    clearInterval(timer);
+                    
+                    const allOptions = document.querySelectorAll('.option');
+                    allOptions.forEach(opt => opt.style.pointerEvents = 'none');
+                    
+                    optionElement.classList.add('selected');
+                    
+                    setTimeout(() => {
+                        if (option.isCorrect) {
+                            optionElement.classList.add('correct');
+                            score++;
+                            scoreValue.textContent = score;
+                            correctSound.play();
+                        } else {
+                            optionElement.classList.add('incorrect');
+                            
+                            // הצג את התשובה הנכונה
+                            allOptions.forEach((opt, i) => {
+                                if (shuffledOptions[i].isCorrect) {
+                                    opt.classList.add('correct');
+                                }
+                            });
+                        }
+                        
+                        nextStageButton.style.display = 'inline-block';
+                    }, 500);
+                });
+                
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            nextStageButton.style.display = 'none';
+        }
+
+        // פונקציה לעדכון הטיימר
+        function updateTimer() {
+            timeLeft--;
+            timerValue.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                
+                if (!hasAnswered) {
+                    hasAnswered = true;
+                    
+                    const allOptions = document.querySelectorAll('.option');
+                    allOptions.forEach((opt, i) => {
+                        opt.style.pointerEvents = 'none';
+                        
+                        if (gameData[currentStage].options[i].isCorrect) {
+                            opt.classList.add('correct');
+                        }
+                    });
+                    
+                    nextStageButton.style.display = 'inline-block';
+                }
+            }
+        }
+
+        // פונקציה למעבר לשלב הבא
+        nextStageButton.addEventListener('click', () => {
+            currentStage++;
+            startStage(currentStage);
+        });
+
+        // פונקציה לסיום המשחק
+        function endGame() {
+            gameScreen.classList.remove('active');
+            resultScreen.classList.add('active');
+            
+            finalScore.textContent = score;
+            playerNameDisplay.textContent = playerName;
+        }
+
+        // פונקציה למשחק חוזר
+        playAgainButton.addEventListener('click', () => {
+            resultScreen.classList.remove('active');
+            welcomeScreen.classList.add('active');
+            
+            currentStage = 0;
+            score = 0;
+            scoreValue.textContent = score;
+            playerNameInput.value = playerName;
+        });
+    </script>
+</body>
+</html>
